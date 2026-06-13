@@ -5,7 +5,7 @@ import { ACTIONS } from '../../reducers/paperReducer';
 export function PaperHeaderEditor() {
   const { present } = usePaper();
   const dispatch = usePaperDispatch();
-  const { header } = present;
+  const header = present?.header || {};
 
   const handleChange = (e) => {
     const { name, value } = e.target;

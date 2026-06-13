@@ -1,21 +1,12 @@
 import React, { memo, useEffect, useRef } from 'react';
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
+import { renderMath } from '../../utils/mathRender';
 
 const MathRenderer = memo(({ formula, displayMode = false }) => {
   const containerRef = useRef(null);
 
   useEffect(() => {
     if (containerRef.current) {
-      try {
-        katex.render(formula, containerRef.current, {
-          displayMode,
-          throwOnError: false,
-          trust: true,
-        });
-      } catch (err) {
-        console.error('KaTeX rendering error:', err);
-      }
+      containerRef.current.innerHTML = renderMath(formula, { displayMode });
     }
   }, [formula, displayMode]);
 

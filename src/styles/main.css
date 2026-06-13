@@ -706,5 +706,26 @@ body { margin: 0; font-family: 'DM Sans', system-ui, sans-serif; background: var
   #main-layout { display: block; height: auto; }
   #preview-panel { width: 100%; overflow: visible; }
   #preview-container { padding: 0; background: none; overflow: visible; }
-  .preview-paper { box-shadow: none; max-width: 100%; }
+  .preview-paper { box-shadow: none; max-width: 100%; padding: 10mm 15mm !important; }
+  
+  .columns-2 {
+    column-count: 2 !important;
+    column-gap: 10mm !important;
+  }
+  
+  .break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Reduce font size for two-column print */
+  .preview-paper.max-w-\[900px\] {
+    font-size: 10pt !important;
+  }
 }
+
+/* Custom Utilities */
+.custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.02); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #bfb5a4; border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #8c7a6a; border: 2px solid transparent; background-clip: content-box; }

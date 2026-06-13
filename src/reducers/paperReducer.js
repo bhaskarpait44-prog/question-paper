@@ -7,7 +7,8 @@ export const INITIAL_STATE = {
     subject: '',
     date: '',
     maxMarks: '',
-    duration: ''
+    duration: '',
+    layout: 'single'
   },
   instructions: '',
   sections: [
@@ -36,6 +37,7 @@ export const ACTIONS = {
   DELETE_SUBPART: 'DELETE_SUBPART',
   REORDER_SECTIONS: 'REORDER_SECTIONS',
   REORDER_QUESTIONS: 'REORDER_QUESTIONS',
+  SET_LAYOUT: 'SET_LAYOUT',
   RESET_PAPER: 'RESET_PAPER',
   UNDO: 'UNDO',
   REDO: 'REDO',
@@ -76,6 +78,12 @@ export function paperReducer(state, action) {
       return pushState({
         ...present,
         header: { ...present.header, ...action.payload }
+      });
+      
+    case ACTIONS.SET_LAYOUT:
+      return pushState({
+        ...present,
+        header: { ...present.header, layout: action.payload }
       });
 
     case ACTIONS.UPDATE_INSTRUCTIONS:
@@ -123,7 +131,7 @@ export function paperReducer(state, action) {
           if (sec.id === sectionId) {
             return {
               ...sec,
-              questions: [...sec.questions, { id: uuidv4(), ...question }]
+              questions: [...sec.questions, { id: uuidv4(), image: null, ...question }]
             };
           }
           return sec;

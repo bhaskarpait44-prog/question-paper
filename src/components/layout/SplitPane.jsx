@@ -33,7 +33,7 @@ export default function SplitPane({ left, right }) {
   }, []);
 
   return (
-    <main ref={containerRef} className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 56px - 53px)' }}>
+    <main ref={containerRef} className="flex flex-1 overflow-hidden">
       {/* Left Pane (Editor) */}
       <section className="flex flex-col overflow-hidden" style={{ width: `${leftWidth}%` }}>
         <div className="text-[0.65rem] font-semibold tracking-[0.12em] uppercase text-ink-300 px-4 py-1.5 bg-ink-50 border-b border-ink-200">

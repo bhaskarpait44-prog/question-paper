@@ -27,9 +27,9 @@ function App() {
     setMathModal(prev => ({ ...prev, isOpen: false }));
   }, []);
 
-  const handleInsertMath = useCallback((latex) => {
+  const handleInsertMath = useCallback((latex, displayMode) => {
     if (mathModal.onInsert) {
-      mathModal.onInsert(latex);
+      mathModal.onInsert(latex, displayMode);
     }
     closeMathModal();
   }, [mathModal, closeMathModal]);
@@ -42,7 +42,7 @@ function App() {
 
   return (
     <PaperProvider>
-      <div className="flex flex-col min-h-screen bg-ink-50 font-sans">
+      <div className="flex flex-col h-screen bg-ink-50 font-sans">
         <Header />
         <Toolbar />
         <SplitPane left={<EditorPane />} right={<PreviewPane />} />

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { usePaperDispatch } from '../../context/PaperContext';
 import { ACTIONS } from '../../reducers/paperReducer';
-import { Trash2, GripVertical, Sigma } from 'lucide-react';
+import { Trash2, GripVertical, Sigma, Image as ImageIcon, X } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { MathTrigger } from '../../App';
@@ -9,26 +9,72 @@ import { MathTrigger } from '../../App';
 export default function QuestionEditor({ sectionId, question, index }) {
   const dispatch = usePaperDispatch();
   const textRef = useRef(null);
+  const fileInputRef = useRef(null);
+  
+  // Ref collections for dynamic items
+  const subPartRefs = useRef({});
+  const optionRefs = useRef({});
 
-  const handleInsertMath = () => {
-    MathTrigger.trigger((latex) => {
-      if (textRef.current) {
-        textRef.current.focus();
+  const handleInsertMath = (targetRef) => {
+    // If targetRef is a DOM element (from our ref collections), use it directly
+    // Otherwise if it's a React ref object, use .current
+    const element = targetRef && targetRef.current ? targetRef.current : targetRef;
+    
+    MathTrigger.trigger((latex, displayMode) => {
+      if (element) {
+        element.focus();
         const selection = window.getSelection();
         if (selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
           const mathSpan = document.createElement('span');
-          mathSpan.className = 'inline-block bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-mono text-xs mx-1';
+          
+          if (displayMode) {
+            mathSpan.className = 'block my-4 bg-blue-50 text-blue-700 px-3 py-2 rounded border border-blue-200 font-mono text-sm text-center mx-auto clear-both';
+            mathSpan.dataset.display = 'block';
+          } else {
+            mathSpan.className = 'inline-block bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-mono text-xs mx-1';
+            mathSpan.dataset.display = 'inline';
+          }
+          
           mathSpan.dataset.latex = latex;
-          mathSpan.innerHTML = `\\(${latex}\\)`;
+          mathSpan.contentEditable = 'false';
+          mathSpan.innerHTML = displayMode ? `\\[ ${latex} \\]` : `\\(${latex}\\)`;
+          
+          range.deleteContents();
           range.insertNode(mathSpan);
-          range.collapse(false);
+          
+          // Add a space after for easier editing
+          const textNode = document.createTextNode('\u00A0');
+          mathSpan.after(textNode);
+          
+          // Move cursor after the space
+          const newRange = document.createRange();
+          newRange.setStartAfter(textNode);
+          newRange.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
           
           // Trigger blur logic to save
-          handleTextBlur();
+          if (element === textRef.current) {
+            handleTextBlur();
+          } else {
+            // Force a synthetic blur event or manual update if needed
+            element.dispatchEvent(new Event('blur', { bubbles: true }));
+          }
         }
       }
     });
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateQuestion({ image: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const {
@@ -50,7 +96,7 @@ export default function QuestionEditor({ sectionId, question, index }) {
   // Sync content editable changes
   useEffect(() => {
     if (textRef.current && textRef.current.innerHTML !== question.text) {
-      textRef.current.innerHTML = question.text;
+      textRef.current.innerHTML = question.text || '';
     }
   }, [question.text]);
 
@@ -62,9 +108,11 @@ export default function QuestionEditor({ sectionId, question, index }) {
   };
 
   const handleTextBlur = () => {
-    const html = textRef.current.innerHTML;
-    if (html !== question.text) {
-      updateQuestion({ text: html });
+    if (textRef.current) {
+      const html = textRef.current.innerHTML;
+      if (html !== question.text) {
+        updateQuestion({ text: html });
+      }
     }
   };
 
@@ -148,13 +196,27 @@ export default function QuestionEditor({ sectionId, question, index }) {
           className="text-sm leading-relaxed text-ink-900 outline-none min-h-[24px] border-b border-dashed border-ink-200 pb-1 focus:border-[#1a6b3c] empty:before:content-[attr(data-placeholder)] empty:before:text-ink-300"
         />
 
+        {/* Image Preview */}
+        {question.image && (
+          <div className="relative inline-block mt-2">
+            <img src={question.image} alt="Question diagram" className="max-h-48 rounded border border-ink-200 shadow-sm" />
+            <button 
+              onClick={() => updateQuestion({ image: null })}
+              className="absolute -top-2 -right-2 bg-crimson-500 text-white rounded-full p-1 shadow-md hover:bg-crimson-600 transition-colors"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+
         {/* Sub-parts Section */}
         <div className="flex flex-col gap-2">
           {question.subParts && question.subParts.map((sp, spIdx) => (
             <div key={sp.id} className="flex gap-2 items-start pl-4 group/subpart">
               <span className="text-xs font-bold text-ink-500 pt-1.5">({String.fromCharCode(97 + spIdx)})</span>
-              <div className="flex-1 flex flex-col gap-1">
+              <div className="flex-1 flex flex-col gap-1 relative">
                 <div 
+                  ref={el => subPartRefs.current[sp.id] = el}
                   contentEditable
                   onBlur={(e) => {
                     const html = e.target.innerHTML;
@@ -165,10 +227,17 @@ export default function QuestionEditor({ sectionId, question, index }) {
                       });
                     }
                   }}
-                  dangerouslySetInnerHTML={{ __html: sp.text }}
+                  dangerouslySetInnerHTML={{ __html: sp.text || '' }}
                   data-placeholder="Sub-part text..."
                   className="text-xs leading-relaxed text-ink-800 outline-none min-h-[20px] border-b border-ink-100 focus:border-[#1a6b3c] empty:before:content-[attr(data-placeholder)] empty:before:text-ink-300"
                 />
+                <button 
+                  onClick={() => handleInsertMath(subPartRefs.current[sp.id])}
+                  className="absolute right-0 bottom-1 p-0.5 text-ink-200 hover:text-blue-500 opacity-0 group-focus-within/subpart:opacity-100 transition-opacity"
+                  title="Insert Math"
+                >
+                  <Sigma size={10} />
+                </button>
               </div>
               <input 
                 type="number"
@@ -201,7 +270,7 @@ export default function QuestionEditor({ sectionId, question, index }) {
         {question.type === 'mcq' && (
           <div className="flex flex-col gap-2 pl-2 border-l-2 border-ink-100">
             {question.options.map((opt, optIdx) => (
-              <div key={optIdx} className="flex items-center gap-2">
+              <div key={optIdx} className="flex items-center gap-2 group/option">
                 <input 
                   type="radio"
                   name={`answer-${question.id}`}
@@ -211,12 +280,27 @@ export default function QuestionEditor({ sectionId, question, index }) {
                   title="Mark as correct answer"
                 />
                 <span className="text-xs font-bold text-ink-400 w-5">{String.fromCharCode(65 + optIdx)}.</span>
-                <input 
-                  type="text"
-                  value={opt}
-                  onChange={(e) => updateOption(optIdx, e.target.value)}
-                  className="flex-1 text-sm border border-ink-200 rounded px-2 py-1 outline-none focus:border-[#1a6b3c]"
-                />
+                <div className="flex-1 relative">
+                  <div 
+                    ref={el => optionRefs.current[optIdx] = el}
+                    contentEditable
+                    onBlur={(e) => {
+                      const html = e.target.innerHTML;
+                      if (html !== opt) {
+                        updateOption(optIdx, html);
+                      }
+                    }}
+                    dangerouslySetInnerHTML={{ __html: opt || '' }}
+                    className="text-sm border border-ink-200 rounded px-2 py-1 outline-none focus:border-[#1a6b3c] bg-white min-h-[30px]"
+                  />
+                  <button 
+                    onClick={() => handleInsertMath(optionRefs.current[optIdx])}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-ink-200 hover:text-blue-500 opacity-0 group-focus-within/option:opacity-100 transition-opacity"
+                    title="Insert Math"
+                  >
+                    <Sigma size={12} />
+                  </button>
+                </div>
                 <button 
                   onClick={() => removeOption(optIdx)}
                   disabled={question.options.length <= 2}
@@ -279,12 +363,26 @@ export default function QuestionEditor({ sectionId, question, index }) {
 
       <div className="flex flex-col gap-1 pt-1">
         <button 
-          onClick={handleInsertMath}
+          onClick={() => handleInsertMath(textRef)}
           className="p-1.5 text-ink-300 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
           title="Insert Math Formula"
         >
           <Sigma size={16} />
         </button>
+        <button 
+          onClick={() => fileInputRef.current.click()}
+          className="p-1.5 text-ink-300 hover:text-gold-500 hover:bg-gold-50 rounded transition-colors"
+          title="Insert Image"
+        >
+          <ImageIcon size={16} />
+        </button>
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleImageUpload} 
+          accept="image/*" 
+          className="hidden" 
+        />
         <button 
           onClick={handleDelete}
           className="p-1.5 text-ink-300 hover:text-crimson-500 hover:bg-[#fde8e8] rounded transition-colors"
